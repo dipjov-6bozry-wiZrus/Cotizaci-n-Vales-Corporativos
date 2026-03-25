@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Cotizaciones - Vales Corporativos</title>
+	<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/138/138292.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        // Configuración de Tailwind para usar variables CSS dinámicas
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: 'var(--brand-primary)',
+                        brandDark: 'var(--brand-secondary)',
+                        brandLight: 'var(--brand-light)',
+                        brandText: 'var(--brand-text)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        :root {
+            /* Colores por defecto (Naranja, Blanco, Negro) */
+            --brand-primary: #f97316; /* Naranja */
+            --brand-secondary: #ea580c; /* Naranja oscuro */
+            --brand-light: #fff7ed; /* Naranja muy claro */
+            --brand-text: #1f2937; /* Negro/Gris oscuro */
+            --bg-color: #ffffff;
+        }
+
+        body {
+            background-color: var(--brand-light);
+            color: var(--brand-text);
+            transition: background-color 0.5s ease;
+        }
+
+        .brand-card {
+            transition: all 0.3s ease;
+        }
+        
+        .brand-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px var(--brand-primary);
+        }
+
+        .dynamic-bg {
+            background-color: var(--brand-primary);
+            color: #ffffff;
+            transition: background-color 0.5s ease;
+        }
+
+        .dynamic-text {
+            color: var(--brand-primary);
+            transition: color 0.5s ease;
+        }
+
+        .dynamic-border {
+            border-color: var(--brand-primary);
+            transition: border-color 0.5s ease;
+        }
+
+        .dynamic-btn {
+            background-color: var(--brand-primary);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .dynamic-btn:hover {
+            background-color: var(--brand-secondary);
+            transform: scale(1.02);
+        }
+
+        /* Ocultar elementos en impresión */
+        @media print {
+            body { background: white; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .modal-content { 
+                box-shadow: none !important; 
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: var(--brand-primary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--brand-secondary); }
+    
+
+        .catalog-media {
+            width: 100%;
+            border-radius: 1rem;
+            border: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .catalog-frame {
+            width: 100%;
+            height: 78vh;
+            border: 0;
+            border-radius: 1rem;
+            background: white;
+        }
+
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased pb-20">
+
+    <!-- Navbar / Header -->
+    <header class="dynamic-bg shadow-md sticky top-0 z-40 transition-all duration-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-3 cursor-pointer" onclick="resetApp()">
+                    <span class="w-8 h-8 flex items-center justify-center border-2 border-white text-white font-bold rounded">
+                        S/.
+                    </span>
+
+                    <span class="font-bold text-xl tracking-tight text-white" id="header-title">Portal de Cotizaciones</span>
+                </div>
+                <div id="selected-brand-badge" class="hidden items-center bg-white/20 px-4 py-1.5 rounded-full backdrop-blur-sm">
+                    <span class="text-sm font-semibold text-white" id="badge-text">Marca</span>
+                    <button onclick="resetApp()" class="ml-2 text-white hover:text-red-200 transition">
+                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PANTALLA 1: Selección de Marca -->
+    <main id="step-1" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 transition-opacity duration-500">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4 dynamic-text">Bienvenido al Portal Corporativo</h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Seleccione la marca con la que desea trabajar para generar su cotización de vales corporativos o productos pre-cargados.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="brands-grid">
+            <!-- Las tarjetas se inyectarán aquí vía JS -->
+        </div>
+    </main>
+
+    <!-- PANTALLA 2: Formulario de Cotización -->
+    <main id="step-2" class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 hidden transition-opacity duration-500">
+        
+        <!-- Hero de Marca Seleccionada -->
+        <div class="relative rounded-2xl overflow-hidden mb-8 h-48 md:h-64 shadow-lg group">
+            <div id="brand-hero-img" class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+            <div class="absolute bottom-0 left-0 p-6 md:p-8 flex items-end gap-6 w-full">
+                <div id="brand-logo-container" class="w-20 h-20 md:w-28 md:h-28 bg-white rounded-xl shadow-xl flex items-center justify-center text-3xl font-bold p-2 border-4 dynamic-border">
+                    <!-- Logo text injectado -->
+                </div>
+                <div class="text-white flex-1">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-1" id="form-brand-name">Nombre Marca</h2>
+                    <p class="text-gray-200 text-sm md:text-base">Solicitud de Vales Corporativos Oficial</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <form id="quote-form" class="space-y-8" onsubmit="event.preventDefault(); generateQuote();">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Datos de la Empresa -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center gap-2 mb-4 dynamic-text">
+                        <i data-lucide="building-2"></i>
+                        <h3 class="text-lg font-bold">Datos de la Empresa</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">RUC</label>
+                            <input type="text" id="empresa-ruc" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="20123456789">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Razón Social</label>
+                            <input type="text" id="empresa-razon" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="Ej. Mi Empresa S.A.C.">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label>
+                            <input type="text" id="empresa-dir" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="Av. Principal 123">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Motivo de Compra</label>
+                            <select id="empresa-motivo" class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition">
+                                <option>Programa de fidelización de clientes</option>
+                                <option>Incentivos para colaboradores</option>
+                                <option>Regalos corporativos</option>
+                                <option>Otros</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Datos del Contacto -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center gap-2 mb-4 dynamic-text">
+                        <i data-lucide="user"></i>
+                        <h3 class="text-lg font-bold">Datos del Contacto</h3>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Nombres y Apellidos</label>
+                            <input type="text" id="contacto-nombre" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="Juan Pérez">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono / Celular</label>
+                            <input type="tel" id="contacto-tel" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="999 888 777">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+                            <input type="email" id="contacto-email" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition" placeholder="correo@empresa.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Solicitud</label>
+                            <input type="date" id="fecha-solicitud" required class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand focus:border-brand transition">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Pedidos -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <div class="flex items-center gap-2 dynamic-text">
+                        <i data-lucide="shopping-cart"></i>
+                        <h3 class="text-lg font-bold">Pedido de Vales</h3>
+                    </div>
+                    <button type="button" onclick="addProductRow()" class="flex items-center gap-1 text-sm font-medium dynamic-text hover:opacity-70 transition">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i> Agregar Fila
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse" id="products-table">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                                <th class="p-4 font-semibold w-24">Cant.</th>
+                                <th class="p-4 font-semibold">Descripción del Producto / Vale</th>
+                                <th class="p-4 font-semibold w-32 text-right">Monto (S/)</th>
+                                <th class="p-4 font-semibold w-32 text-right">Total (S/)</th>
+                                <th class="p-4 font-semibold w-16 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="divide-y divide-gray-100">
+                            <!-- Filas dinámicas -->
+                        </tbody>
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <td colspan="3" class="p-4 text-right font-bold text-gray-700 text-lg">Gran Total:</td>
+                                <td class="p-4 text-right font-bold text-2xl dynamic-text" id="grand-total">S/ 0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-end gap-4 pt-4">
+                <button type="button" onclick="openCatalogModal()" class="px-8 py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 bg-white dynamic-text border-2 dynamic-border hover:opacity-90 transition">
+                    <i data-lucide="book-open"></i> Ver Catálogo
+                </button>
+                <button type="submit" class="dynamic-btn px-8 py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2">
+                    <i data-lucide="calculator"></i> Generar Cotización Formal
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <!-- MODAL DE COTIZACIÓN (Vista de Impresión) -->
+    <div id="quote-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden overflow-y-auto pt-10 pb-10 flex justify-center">
+        <div class="bg-white w-full max-w-4xl min-h-screen md:min-h-0 md:rounded-2xl shadow-2xl relative flex flex-col modal-content" id="printable-area">
+            
+            <!-- Modal Header (No imprimible) -->
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 md:rounded-t-2xl no-print sticky top-0 z-10">
+                <h3 class="font-bold text-gray-700 flex items-center gap-2">
+                    <i data-lucide="file-check" class="w-5 h-5 dynamic-text"></i> Vista Previa de Solicitud
+                </h3>
+                <div class="flex gap-3">
+                    <button onclick="window.print()" class="dynamic-btn px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+                        <i data-lucide="printer" class="w-4 h-4"></i> Imprimir / PDF
+                    </button>
+                    <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-semibold text-gray-700 transition">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Contenido Imprimible -->
+            <div class="p-8 md:p-12 flex-1 bg-white">
+                
+                <!-- Cabecera Documento -->
+                <div class="flex justify-between items-start border-b-2 dynamic-border pb-6 mb-8">
+                    <div class="flex items-center gap-4">
+                        <div id="print-logo" class="w-16 h-16 rounded-lg flex items-center justify-center font-bold text-xl dynamic-bg text-white shadow-sm">
+                            <!-- Logo -->
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-black text-gray-800 tracking-tight" id="print-title">SOLICITUD DE VALES CORPORATIVOS</h1>
+                            <p class="text-gray-500 font-medium" id="print-company-name">BEMBOS S.A.C. 20101087647</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500 font-semibold mb-1">FECHA DE SOLICITUD</p>
+                        <p class="text-lg font-bold dynamic-text" id="print-date">--/--/----</p>
+                    </div>
+                </div>
+
+                <!-- Info Empresa y Contacto -->
+                <div class="grid grid-cols-2 gap-8 mb-8 text-sm">
+                    <div>
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 uppercase tracking-wider text-xs">Datos de la Empresa</h4>
+                        <table class="w-full">
+                            <tr><td class="py-1 text-gray-500 w-28">RUC:</td><td class="font-medium text-gray-800" id="p-ruc"></td></tr>
+                            <tr><td class="py-1 text-gray-500">Razón Social:</td><td class="font-medium text-gray-800" id="p-razon"></td></tr>
+                            <tr><td class="py-1 text-gray-500">Dirección:</td><td class="font-medium text-gray-800" id="p-dir"></td></tr>
+                            <tr><td class="py-1 text-gray-500">Motivo:</td><td class="font-medium text-gray-800" id="p-motivo"></td></tr>
+                        </table>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-800 border-b pb-2 mb-3 uppercase tracking-wider text-xs">Datos de Contacto</h4>
+                        <table class="w-full">
+                            <tr><td class="py-1 text-gray-500 w-28">Nombre:</td><td class="font-medium text-gray-800" id="p-nombre"></td></tr>
+                            <tr><td class="py-1 text-gray-500">Teléfono:</td><td class="font-medium text-gray-800" id="p-tel"></td></tr>
+                            <tr><td class="py-1 text-gray-500">Email:</td><td class="font-medium text-gray-800" id="p-email"></td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabla de Vales -->
+                <h4 class="font-bold text-gray-800 border-b pb-2 mb-4 uppercase tracking-wider text-xs">Detalle de Pedido</h4>
+                <table class="w-full mb-8 text-sm border">
+                    <thead class="dynamic-bg text-white">
+                        <tr>
+                            <th class="py-2 px-4 text-left border-r border-white/20 w-16">Cant.</th>
+                            <th class="py-2 px-4 text-left border-r border-white/20">Descripción</th>
+                            <th class="py-2 px-4 text-right border-r border-white/20 w-28">Monto unit.</th>
+                            <th class="py-2 px-4 text-right w-32">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="print-table-body" class="text-gray-700">
+                        <!-- Llenado vía JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-gray-100 border-t-2 border-gray-300">
+                            <td colspan="3" class="py-3 px-4 text-right font-bold uppercase">Importe Total:</td>
+                            <td class="py-3 px-4 text-right font-black text-lg dynamic-text" id="print-grand-total">S/ 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <!-- Consideraciones y Bancos (Basado en el Excel) -->
+                <div class="text-xs text-gray-600 bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <h4 class="font-bold text-gray-800 mb-2 uppercase">Consideraciones Importantes</h4>
+                    <ol class="list-decimal list-inside space-y-1 mb-4">
+                        <li>Se deberá adjuntar a esta solicitud el voucher original del depósito o transferencia bancaria.</li>
+                        <li>Cualquier cambio en la presente solicitud, deberá ser coordinado con 24 horas de anticipación.</li>
+                        <li>El tiempo de entrega de los vales es de 3 días hábiles después de haber realizado el depósito.</li>
+                        <li>Los vales tienen una vigencia de 4 meses, sin posibilidad a corrección o reimpresiones. No se permiten devoluciones.</li>
+                        <li>Los vales se entregan "al portador", no hay posibilidad de reponerlos en caso de pérdida.</li>
+                    </ol>
+
+                    <h4 class="font-bold text-gray-800 mb-2 uppercase mt-6">Cuentas Bancarias Autorizadas</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border bg-white">
+                            <thead class="bg-gray-200">
+                                <tr>
+                                    <th class="p-2 border">BANCO</th>
+                                    <th class="p-2 border">NÚMERO DE CUENTA</th>
+                                    <th class="p-2 border">CCI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuentas-bancarias-body">
+                                <tr>
+                                    <td class="p-2 border font-medium">Bco. Crédito (BCP)</td>
+                                    <td class="p-2 border">194-1141972-0-69</td>
+                                    <td class="p-2 border">002-194-001141972069-90</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2 border font-medium">Bco. Interbank</td>
+                                    <td class="p-2 border">041-0000918513</td>
+                                    <td class="p-2 border">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="p-2 border font-medium">Bco. Scotiabank</td>
+                                    <td class="p-2 border">000-3371123</td>
+                                    <td class="p-2 border">009-170-000003371123-25</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- <div class="mt-12 pt-8 border-t flex justify-between text-center text-xs text-gray-400">
+                    <div class="w-48 border-t border-gray-400 pt-2 mx-auto">Firma del Solicitante</div>
+                    <div class="w-48 border-t border-gray-400 pt-2 mx-auto">Sello de la Empresa</div>
+                </div> -->
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE CATÁLOGO -->
+    <div id="catalog-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden overflow-y-auto p-4 md:p-8">
+        <div class="bg-white w-full max-w-6xl mx-auto rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 sticky top-0 z-10">
+                <div>
+                    <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-5 h-5 dynamic-text"></i>
+                        <span id="catalog-title">Catálogo de Marca</span>
+                    </h3>
+                    <p class="text-sm text-gray-500 mt-1">Visualice el catálogo cargado para la marca seleccionada.</p>
+                </div>
+                <button type="button" onclick="closeCatalogModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-semibold text-gray-700 transition">
+                    Cerrar
+                </button>
+            </div>
+            <div id="catalog-content" class="p-4 md:p-6 bg-gray-100"></div>
+        </div>
+    </div>
+
+
+    <script>
+        // Inicializar Iconos
+        lucide.createIcons();
+
+        // ----------------------------------------------------
+        // BASE DE DATOS MOCK DE LAS 6 MARCAS Y SUS PRODUCTOS
+        // ----------------------------------------------------
+        const brandsData = {
+            bembos: {
+                id: 'bembos',
+                name: 'Bembos',
+                razonSocial: 'BEMBOS S.A.C. 20101087647',
+                empresa: {
+                    ruc: '20101087647',
+                    razon: 'BEMBOS S.A.C',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '194-1141972-0-69', cci: '002-194-001141972069-90' },
+                    interbank: { cuenta: '041-0000918513', cci: '-' },
+                    scotiabank: { cuenta: '000-3371123', cci: '009-170-000003371123-25' }
+                },
+                colors: { primary: '#1D4ED8', secondary: '#1E3A8A', light: '#EFF6FF', text: '#0F172A' }, // Azul y Amarillo Bembos
+                logoText: 'B',
+                heroImg: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'BEMBOS 2026.jpg 2.jpeg',
+                catalogType: 'image',
+                products: [
+                    { id: 'vc_16', desc: 'VC 16 - Combo Clásica Regular 1', price: 9.90 },
+                    { id: 'vc_18', desc: 'VC 18 - Combo a lo Pobre', price: 13.90 },
+                    { id: 'vc_19', desc: 'VC 19 - Combo Clásica Mediana', price: 16.90 },
+                    { id: 'vc_20', desc: 'VC 20 - Combo Cheese + Clásica', price: 26.90 },
+                    { id: 'vc_25', desc: 'VC 25 - Combo Clásica Regular + Gaseosa', price: 11.90 },
+                    { id: 'vc_26', desc: 'VC 26 - Combo a lo Pobre + Cheese', price: 29.90 },
+                    { id: 'vc_27', desc: 'VC 27 - Combo Nuggets I', price: 12.90 },
+                    { id: 'vc_29', desc: 'VC 29 - Cono Helado', price: 2.00 }
+                ]
+            },
+            donbelisario: {
+                id: 'donbelisario',
+                name: 'Don Belisario',
+                razonSocial: 'DON BELISARIO S.A.C. 20550012345',
+                empresa: {
+                    ruc: '20545699126',
+                    razon: 'EP DE FRANQUICIAS S.A.C',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '193-1976301-0-35', cci: '002-193-001976301035-12' },
+                    interbank: { cuenta: '057-3000738000', cci: '-' },
+                    scotiabank: { cuenta: '9371788-000-01', cci: '009-170-000009371788-22' }
+                },
+                colors: { primary: '#166534', secondary: '#14532d', light: '#f0fdf4', text: '#022c22' }, // Verde oscuro
+                logoText: 'DB',
+                heroImg: 'https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'DON BELISARIO 2026.jpg.jpeg',
+                catalogType: 'image',
+                products: [
+                    { id: 'vc_07', desc: 'VC 07 - Beliclásico Personal', price: 17.90 },
+                    { id: 'vc_08', desc: 'VC 08 - Belicombo Personal', price: 19.90 },
+                    { id: 'vc_09', desc: 'VC 09 - Beliclásico Para Dos', price: 35.90 },
+                    { id: 'vc_10', desc: 'VC 10 - Belicombo Para Dos', price: 39.90 },
+                    { id: 'vc_11', desc: 'VC 11 - Beliclásico Familiar', price: 59.90 },
+                    { id: 'vc_12', desc: 'VC 12 - Belicombo Familiar', price: 69.90 }
+                ]
+            },
+            popeyes: {
+                id: 'popeyes',
+                name: 'Popeyes',
+                razonSocial: 'POPEYES PERU S.A.C. 20555512345',
+                empresa: {
+                    ruc: '20505897812',
+                    razon: 'CORPORACION PERUANA DE RESTAURANTES S.A.C.',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '193-1205241-0-51', cci: '002-193-001205241051-16' },
+                    interbank: { cuenta: '108-3000216275', cci: '-' },
+                    scotiabank: { cuenta: '000-1059688', cci: '009-242-000001059688-90' }
+                },
+                colors: { primary: '#ea580c', secondary: '#c2410c', light: '#fff7ed', text: '#431407' }, // Naranja Popeyes
+                logoText: 'P',
+                heroImg: 'https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'POPEYES 2026.jpg.jpeg',
+                catalogType: 'image',
+                products: [
+                    { id: 'vc_02', desc: 'VC 02 - 2 piezas de pollo + 1 papa regular + 1 gaseosa Jr', price: 14.90 },
+                    { id: 'vc_06', desc: 'VC 06 - 6 piezas de pollo + 3 papas regular', price: 37.90 },
+                    { id: 'vc_10', desc: 'VC 10 - 1 pieza de pollo + 2 nuggets + 1 papa regular + 1 gaseosa Jr', price: 12.90 },
+                    { id: 'vc_12', desc: 'VC 12 - 1 Sándwich Mayo + 1 papa regular + 1 gaseosa Jr', price: 18.90 },
+                    { id: 'vc_13', desc: 'VC 13 - 1 Tosty tradicional + 1 Sandwich Mayo + 2 papas regular', price: 27.90 },
+                    { id: 'vc_14', desc: 'VC 14 - 4 piezas de pollo + 2 papas regular + 2 gaseosas Jr', price: 27.90 }
+                ]
+            },
+            chinawok: {
+                id: 'chinawok',
+                name: 'ChinaWok',
+                razonSocial: 'CHINAWOK S.A. 20123456780',
+                empresa: {
+                    ruc: '20101869947',
+                    razon: 'ALERT DEL PERU S.A.C.',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '191-1576875-0-28', cci: '002-191001576875028-51' },
+                    interbank: { cuenta: '200-3001430031', cci: '-' },
+                    scotiabank: { cuenta: '1968416-000-01', cci: '009-170-000001968416-26' }
+                },
+                colors: { primary: '#e11d48', secondary: '#be123c', light: '#fff1f2', text: '#4c0519' }, // Rojo
+                logoText: 'CW',
+                heroImg: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'CARTILLA 2026 CW.jpg.jpeg',
+                catalogType: 'image',
+                products: [
+                    { id: 'vc_07', desc: 'VC 07 - Chaufa Personal', price: 9.90 },
+                    { id: 'vc_08', desc: 'VC 08 - Encájate a Elección + 1 Vaso de Gaseosa Junior', price: 11.90 },
+                    { id: 'vc_09', desc: 'VC 09 - Mostrazo Chicharrón + 1 Vaso de Gaseosa Junior', price: 15.90 },
+                    { id: 'vc_10', desc: 'VC 10 - Chi Jau Kay - A lo Pobre + 1 Vaso de Gaseosa Junior', price: 17.90 },
+                    { id: 'vc_11', desc: 'VC 11 - Dúo Encájate (2 Encájate a Elección + 2 Wantanes)', price: 23.90 },
+                    { id: 'vc_12', desc: 'VC 12 - Dúo Clásicos (1 Arroz Chaufa + 1 Combinado Taypá + 2 Tequeños + 2 Gaseosas)', price: 26.90 }
+                ]
+            },
+            papajohns: {
+                id: 'papajohns',
+                name: 'Papa Johns',
+                razonSocial: 'PAPA JOHNS PERU S.A. 20444455551',
+                empresa: {
+                    ruc: '20545699550',
+                    razon: 'EP DE RESTAURANTES S.A.C.',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '193-1976300-0-25', cci: '002-193-001976300025-14' },
+                    interbank: { cuenta: '057-3000738026', cci: '-' },
+                    scotiabank: { cuenta: '9371753-000-01', cci: '009-170-000009371753-26' }
+                },
+                colors: { primary: '#047857', secondary: '#065f46', light: '#ecfdf5', text: '#022c22' }, // Verde y Rojo Papa Johns (Usando Verde base)
+                logoText: 'PJ',
+                heroImg: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'Cartilla 2026 PJ.jpeg',
+                catalogType: 'image',
+                products: [
+                    { id: 'vc_01', desc: 'VC 01 - Pizza Personal Clásica', price: 7.00 },
+                    { id: 'vc_02', desc: 'VC 02 - Mini Cheesestick + 1 Gaseosa 12 oz', price: 10.90 },
+                    { id: 'vc_03', desc: 'VC 03 - Pizza Personal + 1 Gaseosa 12 oz', price: 12.90 },
+                    { id: 'vc_04', desc: 'VC 04 - Pizza Mediana + 1 Gaseosa 12 oz', price: 15.90 },
+                    { id: 'vc_05', desc: 'VC 05 - 2 Pizzas Personales + 2 Gaseosas', price: 19.90 },
+                    { id: 'vc_06', desc: 'VC 06 - Pizza Grande Clásica o Especialidad', price: 22.00 },
+                    { id: 'vc_07', desc: 'VC 07 - 2 Pizzas Grandes Clásicas', price: 43.90 },
+                    { id: 'vc_08', desc: 'VC 08 - Pizza Familiar Clásica o Especialidad', price: 32.90 }
+                ]
+            },
+            dunkindonuts: {
+                id: 'dunkindonuts',
+                name: 'Dunkin Donuts',
+                razonSocial: 'DUNKIN PERU S.A.C. 20888899991',
+                empresa: {
+                    ruc: '20144215649',
+                    razon: 'NUTRA S.A.C.',
+                    direccion: 'JR.BERNARDO ALCEDO NRO. 662 LIMA-LINCE-LINCE'
+                },
+                cuentas: {
+                    bcp: { cuenta: '194-0080486-0-88', cci: '002-194-000080486088-90' },
+                    interbank: { cuenta: '107-3000226137', cci: '-' },
+                    scotiabank: { cuenta: '000-8885990', cci: '009 170 000008885990 25' }
+                },
+                colors: { primary: '#db2777', secondary: '#be185d', light: '#fdf2f8', text: '#500724' }, // Rosa Dunkin
+                logoText: 'DD',
+                heroImg: 'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=1200&q=80',
+                catalogFile: 'GetFileAttachment 1.pdf',
+                catalogType: 'pdf',
+                products: [
+                    { id: 'vc_51', desc: 'VC 51 - 2 Donuts Clásicas', price: 8.50 },
+                    { id: 'vc_52', desc: 'VC 52 - Bebida 12 oz + 1 Donut Clásica', price: 10.90 },
+                    { id: 'vc_53', desc: 'VC 53 - Bebida 16 oz + 1 Donut Clásica', price: 12.90 },
+                    { id: 'vc_54', desc: 'VC 54 - Bebida 12 oz + 3 Donuts Clásicas', price: 18.90 },
+                    { id: 'vc_55', desc: 'VC 55 - Media Docena de Donuts Clásica', price: 23.90 },
+                    { id: 'vc_56', desc: 'VC 56 - Docena de Donuts Clásica', price: 36.90 },
+                    { id: 'vc_57', desc: 'VC 57 - 1/2 Docena Premium', price: 29.90 },
+                    { id: 'vc_58', desc: 'VC 58 - Iced Latte 12 oz + 1 Donut Clásica', price: 10.90 }
+                ]
+            }
+        };
+
+        let currentBrand = null;
+        let rowCount = 0;
+
+        // ----------------------------------------------------
+        // INICIALIZACIÓN DE LA UI
+        // ----------------------------------------------------
+        function initApp() {
+            const grid = document.getElementById('brands-grid');
+            
+            // Renderizar tarjetas de marcas
+            Object.values(brandsData).forEach(brand => {
+                const card = document.createElement('div');
+                card.className = 'brand-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer';
+                card.onclick = () => selectBrand(brand.id);
+                
+                card.innerHTML = `
+                    <div class="h-32 bg-gray-200 relative">
+                        <img src="${brand.heroImg}" alt="${brand.name}" class="w-full h-full object-cover opacity-80" />
+                        <div class="absolute inset-0 bg-black/20"></div>
+                        <div class="absolute -bottom-6 left-6 w-16 h-16 rounded-xl shadow-lg flex items-center justify-center text-xl font-bold border-4 border-white" style="background-color: ${brand.colors.primary}; color: white;">
+                            ${brand.logoText}
+                        </div>
+                    </div>
+                    <div class="p-6 pt-10">
+                        <h3 class="text-xl font-bold mb-1" style="color: ${brand.colors.text}">${brand.name}</h3>
+                        <p class="text-sm text-gray-500">Generar vales para ${brand.name}</p>
+                        <div class="mt-4 flex items-center text-sm font-semibold transition" style="color: ${brand.colors.primary}">
+                            Seleccionar <i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            lucide.createIcons();
+            
+            // Setear fecha actual en el input
+            document.getElementById('fecha-solicitud').valueAsDate = new Date();
+        }
+
+        // ----------------------------------------------------
+        // LÓGICA DE SELECCIÓN DE MARCA Y TEMAS
+        // ----------------------------------------------------
+        function selectBrand(brandId) {
+            currentBrand = brandsData[brandId];
+            
+            // Cambiar variables CSS para aplicar el tema de color
+            document.documentElement.style.setProperty('--brand-primary', currentBrand.colors.primary);
+            document.documentElement.style.setProperty('--brand-secondary', currentBrand.colors.secondary);
+            document.documentElement.style.setProperty('--brand-light', currentBrand.colors.light);
+            document.documentElement.style.setProperty('--brand-text', currentBrand.colors.text);
+
+            // Actualizar UI del Header
+            document.getElementById('selected-brand-badge').classList.remove('hidden');
+            document.getElementById('selected-brand-badge').classList.add('flex');
+            document.getElementById('badge-text').innerText = currentBrand.name;
+
+            // Actualizar UI del Hero del Formulario
+            document.getElementById('brand-hero-img').style.backgroundImage = `url('${currentBrand.heroImg}')`;
+            const logoContainer = document.getElementById('brand-logo-container');
+            logoContainer.innerHTML = currentBrand.logoText;
+            logoContainer.style.color = currentBrand.colors.primary;
+            document.getElementById('form-brand-name').innerText = currentBrand.name;
+
+            // Autocompletar datos de empresa por marca
+            // document.getElementById('empresa-ruc').value = currentBrand.empresa?.ruc || '';
+            // document.getElementById('empresa-razon').value = currentBrand.empresa?.razon || '';
+            // document.getElementById('empresa-dir').value = currentBrand.empresa?.direccion || '';
+
+            // Transición de Pantallas
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+
+            // Limpiar tabla e inicializar con 1 fila
+            document.getElementById('table-body').innerHTML = '';
+            rowCount = 0;
+            updateGrandTotal();
+            addProductRow();
+            
+            // Scroll suave hacia arriba
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetApp() {
+            currentBrand = null;
+            
+            // Restaurar colores por defecto (Naranja)
+            document.documentElement.style.setProperty('--brand-primary', '#f97316');
+            document.documentElement.style.setProperty('--brand-secondary', '#ea580c');
+            document.documentElement.style.setProperty('--brand-light', '#fff7ed');
+            document.documentElement.style.setProperty('--brand-text', '#1f2937');
+
+            // Reset UI Header
+            document.getElementById('selected-brand-badge').classList.add('hidden');
+            document.getElementById('selected-brand-badge').classList.remove('flex');
+            
+            // Limpiar formulario
+            document.getElementById('quote-form').reset();
+            document.getElementById('empresa-ruc').value = '';
+            document.getElementById('empresa-razon').value = '';
+            document.getElementById('empresa-dir').value = '';
+            document.getElementById('fecha-solicitud').valueAsDate = new Date();
+
+            closeCatalogModal();
+            closeModal();
+
+            // Transición de Pantallas
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-1').classList.remove('hidden');
+        }
+
+        // ----------------------------------------------------
+        // LÓGICA DE LA TABLA (EXCEL)
+        // ----------------------------------------------------
+        function addProductRow() {
+            rowCount++;
+            const tbody = document.getElementById('table-body');
+            const tr = document.createElement('tr');
+            tr.id = `row-${rowCount}`;
+            tr.className = "hover:bg-gray-50 transition";
+            
+            // Crear opciones del select dinámicamente según la marca seleccionada
+            let optionsHtml = '<option value="" disabled selected>Seleccione un producto...</option>';
+            if(currentBrand) {
+                currentBrand.products.forEach(p => {
+                    optionsHtml += `<option value="${p.id}" data-price="${p.price}">${p.desc}</option>`;
+                });
+            }
+
+            tr.innerHTML = `
+                <td class="p-2 md:p-4">
+                    <input type="number" min="1" value="1" class="qty-input w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand transition text-center" onchange="calculateRow(${rowCount})" onkeyup="calculateRow(${rowCount})">
+                </td>
+                <td class="p-2 md:p-4">
+                    <select class="prod-select w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:outline-none focus:ring-brand transition" onchange="calculateRow(${rowCount})">
+                        ${optionsHtml}
+                    </select>
+                </td>
+                <td class="p-2 md:p-4">
+                    <div class="flex items-center bg-gray-100 rounded-lg px-3 py-2 border border-gray-200">
+                        <span class="text-gray-500 mr-1 text-sm">S/</span>
+                        <input type="text" readonly class="price-input bg-transparent w-full outline-none text-right text-gray-700 font-medium" value="0.00">
+                    </div>
+                </td>
+                <td class="p-2 md:p-4">
+                    <div class="flex items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 dynamic-text font-bold">
+                        <span class="mr-1 text-sm">S/</span>
+                        <input type="text" readonly class="total-input bg-transparent w-full outline-none text-right" value="0.00">
+                    </div>
+                </td>
+                <td class="p-2 md:p-4 text-center">
+                    <button type="button" onclick="removeRow(${rowCount})" class="text-gray-400 hover:text-red-500 transition p-2" title="Eliminar fila">
+                        <i data-lucide="trash-2" class="w-5 h-5"></i>
+                    </button>
+                </td>
+            `;
+            
+            tbody.appendChild(tr);
+            lucide.createIcons();
+        }
+
+        function removeRow(id) {
+            const row = document.getElementById(`row-${id}`);
+            if (row) {
+                row.remove();
+                updateGrandTotal();
+            }
+        }
+
+        function calculateRow(id) {
+            const row = document.getElementById(`row-${id}`);
+            if(!row) return;
+
+            const qtyInput = row.querySelector('.qty-input');
+            const select = row.querySelector('.prod-select');
+            const priceInput = row.querySelector('.price-input');
+            const totalInput = row.querySelector('.total-input');
+
+            const qty = parseFloat(qtyInput.value) || 0;
+            const selectedOption = select.options[select.selectedIndex];
+            
+            if (selectedOption && selectedOption.value !== "") {
+                const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+                priceInput.value = price.toFixed(2);
+                
+                const total = qty * price;
+                totalInput.value = total.toFixed(2);
+            } else {
+                priceInput.value = "0.00";
+                totalInput.value = "0.00";
+            }
+
+            updateGrandTotal();
+        }
+
+        function updateGrandTotal() {
+            let grandTotal = 0;
+            const totalInputs = document.querySelectorAll('.total-input');
+            
+            totalInputs.forEach(input => {
+                grandTotal += parseFloat(input.value) || 0;
+            });
+
+            document.getElementById('grand-total').innerText = `S/ ${grandTotal.toFixed(2)}`;
+        }
+
+        function openCatalogModal() {
+            if (!currentBrand) {
+                alert('Primero debe seleccionar una marca.');
+                return;
+            }
+
+            const catalogContent = document.getElementById('catalog-content');
+            const catalogTitle = document.getElementById('catalog-title');
+            catalogTitle.innerText = `Catálogo - ${currentBrand.name}`;
+
+            if (!currentBrand.catalogFile) {
+                catalogContent.innerHTML = `
+                    <div class="bg-white rounded-2xl border border-dashed border-gray-300 p-10 text-center text-gray-500">
+                        No hay catálogo configurado para esta marca.
+                    </div>
+                `;
+            } else if (currentBrand.catalogType === 'pdf') {
+                catalogContent.innerHTML = `
+                    <iframe src="${currentBrand.catalogFile}" class="catalog-frame" title="Catálogo ${currentBrand.name}"></iframe>
+                `;
+            } else {
+                catalogContent.innerHTML = `
+                    <img src="${currentBrand.catalogFile}" alt="Catálogo ${currentBrand.name}" class="catalog-media mx-auto" />
+                `;
+            }
+
+            document.getElementById('catalog-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCatalogModal() {
+            document.getElementById('catalog-modal').classList.add('hidden');
+            document.body.style.overflow = document.getElementById('quote-modal').classList.contains('hidden') ? 'auto' : 'hidden';
+        }
+
+        // ----------------------------------------------------
+        // LÓGICA DE COTIZACIÓN (MODAL E IMPRESIÓN)
+        // ----------------------------------------------------
+        function generateQuote() {
+            // Validación básica de tabla vacía
+            const totalInputs = document.querySelectorAll('.total-input');
+            let hasItems = false;
+            totalInputs.forEach(input => {
+                if(parseFloat(input.value) > 0) hasItems = true;
+            });
+
+            if(!hasItems) {
+                alert("Debe agregar al menos un producto a la cotización.");
+                return;
+            }
+
+            // Poblado de Datos de Empresa/Contacto en el Modal
+            document.getElementById('print-title').innerText = `SOLICITUD DE VALES - ${currentBrand.name.toUpperCase()}`;
+            document.getElementById('print-company-name').innerText = currentBrand.razonSocial;
+            document.getElementById('print-logo').innerText = currentBrand.logoText;
+            
+            // Extraer y formatear la fecha
+            const f = document.getElementById('fecha-solicitud').value.split('-');
+            document.getElementById('print-date').innerText = f.length === 3 ? `${f[2]}/${f[1]}/${f[0]}` : '--/--/----';
+
+            document.getElementById('p-ruc').innerText = document.getElementById('empresa-ruc').value;
+            document.getElementById('p-razon').innerText = document.getElementById('empresa-razon').value;
+            document.getElementById('p-dir').innerText = document.getElementById('empresa-dir').value;
+            document.getElementById('p-motivo').innerText = document.getElementById('empresa-motivo').value;
+
+            document.getElementById('p-nombre').innerText = document.getElementById('contacto-nombre').value;
+            document.getElementById('p-tel').innerText = document.getElementById('contacto-tel').value;
+            document.getElementById('p-email').innerText = document.getElementById('contacto-email').value;
+
+            // Poblado de la tabla del Modal
+            const printTbody = document.getElementById('print-table-body');
+            printTbody.innerHTML = '';
+            
+            const rows = document.querySelectorAll('#table-body tr');
+            rows.forEach(row => {
+                const qty = row.querySelector('.qty-input').value;
+                const select = row.querySelector('.prod-select');
+                const desc = select.options[select.selectedIndex].text;
+                const price = row.querySelector('.price-input').value;
+                const total = row.querySelector('.total-input').value;
+
+                if(select.value !== "" && parseFloat(total) > 0) {
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-200";
+                    tr.innerHTML = `
+                        <td class="py-2 px-4 text-center">${qty}</td>
+                        <td class="py-2 px-4 font-medium">${desc}</td>
+                        <td class="py-2 px-4 text-right">S/ ${price}</td>
+                        <td class="py-2 px-4 text-right font-bold text-gray-800">S/ ${total}</td>
+                    `;
+                    printTbody.appendChild(tr);
+                }
+            });
+
+            document.getElementById('print-grand-total').innerText = document.getElementById('grand-total').innerText;
+
+            const cuentas = currentBrand.cuentas || {
+                bcp: { cuenta: '-', cci: '-' },
+                interbank: { cuenta: '-', cci: '-' },
+                scotiabank: { cuenta: '-', cci: '-' }
+            };
+
+            document.getElementById('cuentas-bancarias-body').innerHTML = `
+                <tr>
+                    <td class="p-2 border font-medium">Bco. Crédito (BCP)</td>
+                    <td class="p-2 border">${cuentas.bcp.cuenta}</td>
+                    <td class="p-2 border">${cuentas.bcp.cci}</td>
+                </tr>
+                <tr>
+                    <td class="p-2 border font-medium">Bco. Interbank</td>
+                    <td class="p-2 border">${cuentas.interbank.cuenta}</td>
+                    <td class="p-2 border">${cuentas.interbank.cci}</td>
+                </tr>
+                <tr>
+                    <td class="p-2 border font-medium">Bco. Scotiabank</td>
+                    <td class="p-2 border">${cuentas.scotiabank.cuenta}</td>
+                    <td class="p-2 border">${cuentas.scotiabank.cci}</td>
+                </tr>
+            `;
+
+            // Mostrar el Modal
+            document.getElementById('quote-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Evitar scroll del body de fondo
+        }
+
+        function closeModal() {
+            document.getElementById('quote-modal').classList.add('hidden');
+            document.body.style.overflow = document.getElementById('catalog-modal').classList.contains('hidden') ? 'auto' : 'hidden';
+        }
+
+        // Iniciar aplicación al cargar
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
